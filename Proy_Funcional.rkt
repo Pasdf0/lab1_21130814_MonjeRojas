@@ -7,6 +7,10 @@
 (define list-dup? (lambda (lista)
         (not (false? (check-duplicates lista)))))
 
+(define (myRandom Xn)
+        (modulo (+ (* 1103515245 Xn) 12345) 2147483648)
+)
+
 ;----------------Constructores TDA
 
 ;Option
@@ -21,7 +25,7 @@
 (define flow (lambda (Flow-ID msg . Options)
         (if (and (exact-positive-integer? Flow-ID)(string? msg))
             (list Flow-ID msg (if (all-option? Options)
-                                   Options null))
+                                   (dup-list-op Options) null))
             InvalidFlow)))
 
 ;Chatbot
@@ -38,7 +42,7 @@
 (define option? (lambda (op)                  
         (and (list? op)(= (length op) 5)(exact-positive-integer? (car op))(string? (cadr op))
              (exact-positive-integer? (caddr op))(exact-positive-integer? (cadddr op))
-             (all-strings? (car (cddddr op))))))
+             (or (all-strings? (car (cddddr op)))(null? (car (cddddr op)))))))
 
 (define all-option? (lambda (lista)
         (if (null? lista)
@@ -71,63 +75,91 @@
 ;---------------Selectores TDA
 
 ;Option
-(define Selector-op-code (lambda (op)
+(define Sel-op-code (lambda (op)
         (if (option? op)
             (list-ref op 0)
             null)))
 
-(define Selector-op-msg (lambda (op)
+(define Sel-op-msg (lambda (op)
         (if (option? op)
             (list-ref op 1)
             null)))
 
-(define Selector-op-chatbotcodelink (lambda (op)
+(define Sel-op-cbcodelink (lambda (op)
         (if (option? op)
             (list-ref op 2)
             null)))
 
-(define Selector-op-initialflowcodelink (lambda (op)
+(define Sel-op-initialfwcodelink (lambda (op)
         (if (option? op)
             (list-ref op 3)
             null)))
 
-(define Selector-op-keywords (lambda (op)
+(define Sel-op-keywords (lambda (op)
         (if (option? op)
             (list-ref op 4)
             null)))
 
 ;Flow
-(define Selector-fw-ID (lambda (fw)
+(define Sel-fw-id (lambda (fw)
         (if (flow? fw)
             (list-ref fw 0)
             null)))
 
-(define Selector-fw-msg (lambda (fw)
+(define Sel-fw-msg (lambda (fw)
         (if (flow? fw)
             (list-ref fw 1)
             null)))
 
-(define Selector-fw-op (lambda (fw)
+(define Sel-fw-op (lambda (fw)
         (if (flow? fw)
             (list-ref fw 2)
             null)))
 
 ;------------------Duplicidad
-(define flow-dup-op? (lambda (fw)
-        (if (flow? fw)
-            (list-dup? (map Selector-op-code (Selector-fw-op fw))) 
-            null)))
+;Sin Utilidad por ahora
+;(define flow-dup-op? (lambda (fw)
+;        (if (flow? fw)
+;            (list-dup? (map Sel-op-code (Sel-fw-op fw))) 
+;            null)))
 
-;(define Dup-flow-op (lambda (fw)
-;        (if (flow-op-codes fw)
+(define dup-list-op (lambda (list-op)
+        (define compare-code (lambda (op1 op2)
+                (= (Sel-op-code op1) (Sel-op-code op2))))
+        (remove-duplicates list-op compare-code)))
+
+(define dup-list-fw (lambda (list-fw)
+        (define compare-fw-id (lambda (fw1 fw2)
+                (= (Sel-fw-id fw1) (Sel-fw-id fw2))))
+        (remove-duplicates list-fw compare-fw-id)))
+
+
+
+
+;-------------------Modificadores
 
 ;Option
-;(define Dup-list-op (lambda (lista)
-;        (define Dup-op-aux (lambda (L aux n)
-;                (for ())))))
+(define change-op-code (lambda (op n)
+        (if (and (option? op) (integer? n))
+            (option n (Sel-op-msg op) (Sel-op-cbcodelink op)
+                    (Sel-op-initialfwcodelink op) (Sel-op-keywords op))
+            InvalidOption)))
 
 ;Flow
-;(define Dup-flow (fw))
+(define delete-fw-op (lambda (fw)
+        (if (flow? fw)
+            (remove (Sel-fw-op fw) fw)
+            InvalidFlow)))
+
+(define change-fw-op (lambda (fw list-op)
+        (if (and (flow? fw)(all-option? list-op))
+            (append (delete-fw-op fw) list-op)
+            InvalidFlow)))
+
+(define flow-add-option (lambda (fw op)
+        (if (and (flow? fw)(option? op))
+            (change-fw-op fw (dup-list-op (append (Sel-fw-op fw) (list op))))
+            InvalidFlow)))
 
 ;-----------------------------------------------------------
 
@@ -136,5 +168,10 @@
 (define op2 (option 2 "msg2" 2 2 "Key2-1" "Key2-2" "Key2-3"))
 (define op3 (option 3 "msg3" 3 3 "Key3-1" 25 "Key3-3"))
 (define op4 (option 3 "msg4" 4 4 "Key4-1" "Key4-2" "Key4-3"))
-(define fw1 (flow 1 "TestFlow1" op1 op2 op3 op4))
-(flow-dup-op? fw1)
+(define fw1 (flow 1 "TestFlow1" op1 op2 op3))
+;(change-op-code op3 4)
+(define n1 (myRandom 1))
+(define n2 (myRandom n1))
+;(dup-list-op (Sel-fw-op fw1))
+(define test (dup-list-op (append (Sel-fw-op fw1) (list op4))))
+(flow-add-option fw1 op4)
