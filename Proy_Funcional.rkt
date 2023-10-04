@@ -5,6 +5,10 @@
 (define InvalidFlow null)
 (define InvalidChatbot null)
 (define InvalidSystem null)
+(define InvalidUserHistory null)
+(define InvalidUser null)
+(define NoUser "no-user")
+(define EmptyList (list null))
 
 (define epi? (lambda (n) (or (exact-positive-integer? n) (= n 0))))
 ;Se redefine la función para verificar ids en caso de requerir cambios
@@ -43,8 +47,17 @@
 (define system (lambda (name InitialChatbotCodeLink . Chatbots)
         (if (and (string? name)(epi? InitialChatbotCodeLink))
             (list name InitialChatbotCodeLink (if (all-chatbot? Chatbots)
-                                                  (dup-list-cb Chatbots) null))
+                                                  (dup-list-cb Chatbots) null) NoUser EmptyList)
             InvalidSystem)))
+
+;UserHistory
+(define userhistory (list null))
+
+;User
+(define user (lambda (name)
+        (if (string? name)
+            (list name userhistory)
+            InvalidUser)))
 
 ;---------------Funciones de pertenencia TDA
 
@@ -80,7 +93,7 @@
 (define all-chatbot? (lambda (list-cb)
         (if (null? list-cb)
             #t
-            (if (chatbot? (cdr list-cb))
+            (if (chatbot? (car list-cb))
                 (all-chatbot? (cdr list-cb))
                 #f))))
 
@@ -89,6 +102,21 @@
         (and (list? sys)(= (length sys) 3)(string? (car sys))
              (epi? (cadr sys))(all-chatbot? (caddr sys)))))
 
+;UserHistory
+(define userhistory? (lambda (usrhys)
+        (or (and (list? usrhys)(all-strings? usrhys))(null? usrhys))))
+
+;User
+(define user? (lambda (usr)
+        (and (list? usr)(= (length usr) 2)(string? (car usr))
+             (userhistory? (cadr usr)))))
+
+(define all-user? (lambda (list-usr)
+        (if (null? list-usr)
+            #t
+            (if (user? (car list-usr))
+                (all-user? (cdr list-usr))
+                #f))))
 ;Adicionales
 
 (define all-strings? (lambda (lista)
@@ -184,12 +212,50 @@
             (list-ref sys 2)
             null)))
 
+(define Sel-sys-usr (lambda (sys)
+        (if (system? sys)
+            (list-ref sys 3)
+            null)))
+
+(define Sel-sys-list-usr (lambda (sys)
+        (if (system? sys)
+            (list-ref sys 4)
+            null)))
+
+;User
+(define Sel-usr-name (lambda (usr)
+        (if (user? usr)
+            (list-ref usr 0)
+            null)))
+
+(define Sel-usr-history (lambda (usr)
+        (if (user? usr)
+            (list-ref usr 1)
+            null)))
+
 ;------------------Duplicidad
 ;Sin Utilidad por ahora
 ;(define flow-dup-op? (lambda (fw)
 ;        (if (flow? fw)
 ;            (list-dup? (map Sel-op-code (Sel-fw-op fw))) 
 ;            null)))
+
+#| Esto haria insertar de a uno mas eficiente pero no es necesario/ trabajo en progreso
+(define flow-insert-op (lambda (fw op)
+        (if (false? (member (Sel-op-code op) (map Sel-op-code (Sel-fw-op fw))))
+            (append (Sel-fw-op fw) (list op))
+            InvalidFlow)))
+
+(define chatbot-insert-fw (lambda (fw op)
+        (if (false? (member (Sel-op-code op) (map Sel-op-code (Sel-fw-op fw))))
+            (append (Sel-fw-op fw) (list op))
+            InvalidFlow)))
+
+(define system-insert-cb (lambda (fw op)
+        (if (false? (member (Sel-op-code op) (map Sel-op-code (Sel-fw-op fw))))
+            (append (Sel-fw-op fw) (list op))
+            InvalidFlow)))
+|#
 
 (define dup-list-op (lambda (list-op)
         (define compare-code (lambda (op1 op2)
@@ -219,9 +285,7 @@
 ;Flow
 (define change-fw-op (lambda (fw list-op)
         (define delete-fw-op (lambda (fw)
-                (if (flow? fw)
-                    (remove (Sel-fw-op fw) fw)
-                    InvalidFlow)))
+                (remove (Sel-fw-op fw) fw)))
         (if (and (flow? fw)(all-option? list-op))
             (append (delete-fw-op fw) list-op)
             InvalidFlow)))
@@ -234,9 +298,7 @@
 ;Chatbot
 (define change-cb-fw (lambda (cb list-fw)
         (define delete-cb-fw (lambda (cb)
-                (if (chatbot? cb)
-                    (remove (Sel-cb-fw cb) cb)
-                    InvalidChatbot)))
+                (remove (Sel-cb-fw cb) cb)))
         (if (and (chatbot? cb)(all-flow? list-fw))
             (append (delete-cb-fw cb) list-fw)
             InvalidChatbot)))
@@ -246,9 +308,35 @@
             (change-cb-fw cb (dup-list-fw (append (Sel-cb-fw cb) (list fw))))
             InvalidChatbot)))
 
+;System
+(define change-sys-cb (lambda (sys list-cb)
+        (define delete-sys-cb (lambda (sys)
+                (remove (Sel-sys-cb sys) sys)))
+        (if (and (system? sys)(all-chatbot? list-cb))
+            (cons (Sel-sys-name sys) (cons (Sel-sys-startcbcode sys) (cons (list-cb) (cdddr sys))))
+            InvalidSystem)))
+
+(define system-add-chatbot (lambda (sys cb)
+        (if (and (system? sys)(chatbot? cb))
+            (change-sys-cb sys (dup-list-cb (append (Sel-sys-cb sys) (list cb))))
+            InvalidSystem)))
+
+(define change-sys-usr-list (lambda (sys list-usr)
+        (define delete-sys-usr (lambda (usr)
+                (remove (Sel-sys-list-usr sys) sys)))
+        (if (and (system? sys)(all-user? list-usr))
+            (append (delete-sys-usr sys) list-usr)
+            InvalidUser)))
+
+(define system-add-user (lambda (sys usr)
+        (if (and (system? sys)(user? usr))
+            (change-sys-usr-list sys (append (Sel-sys-list-usr sys) (list usr)))
+            InvalidUser)))
+            
 
 ;-----------------------------------------------------------
 
+#|
 ;testing
 (define op1 (option 1 "msg1" 1 1 "Key1-1" "Key1-2" "Key1-3"))
 (define op2 (option 2 "msg2" 2 2 "Key2-1" "Key2-2" "Key2-3"))
@@ -261,5 +349,6 @@
 ;(dup-list-op (Sel-fw-op fw1))
 (define test (dup-list-op (append (Sel-fw-op fw1) (list op4))))
 ;(flow-add-option fw1 op4)
+|#
 
 
