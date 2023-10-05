@@ -8,7 +8,7 @@
 (define InvalidUserHistory null)
 (define InvalidUser null)
 (define NoUser "no-user")
-(define EmptyList (list null))
+(define EmptyList (list ))
 
 (define epi? (lambda (n) (or (exact-positive-integer? n) (= n 0))))
 ;Se redefine la función para verificar ids en caso de requerir cambios
@@ -47,17 +47,16 @@
 (define system (lambda (name InitialChatbotCodeLink . Chatbots)
         (if (and (string? name)(epi? InitialChatbotCodeLink))
             (list name InitialChatbotCodeLink (if (all-chatbot? Chatbots)
-                                                  (dup-list-cb Chatbots) null) NoUser EmptyList)
+                                                  (dup-list-cb Chatbots) null) NoUser userhistory EmptyList)
             InvalidSystem)))
 
 ;UserHistory
-(define userhistory (list null))
+(define userhistory EmptyList)
 
 ;User
 (define user (lambda (name)
         (if (string? name)
-            (list name userhistory)
-            InvalidUser)))
+            name InvalidUser)))
 
 ;---------------Funciones de pertenencia TDA
 
@@ -99,17 +98,16 @@
 
 ;System
 (define system? (lambda (sys)
-        (and (list? sys)(= (length sys) 3)(string? (car sys))
-             (epi? (cadr sys))(all-chatbot? (caddr sys)))))
+        (and (list? sys)(= (length sys) 6)(string? (car sys))
+             (epi? (cadr sys))(all-chatbot? (caddr sys))(user? (cadddr sys))
+             (userhistory? (car (cddddr sys)))(all-user? (cadr (cddddr sys))))))
 
 ;UserHistory
 (define userhistory? (lambda (usrhys)
         (or (and (list? usrhys)(all-strings? usrhys))(null? usrhys))))
 
 ;User
-(define user? (lambda (usr)
-        (and (list? usr)(= (length usr) 2)(string? (car usr))
-             (userhistory? (cadr usr)))))
+(define user? string?)
 
 (define all-user? (lambda (list-usr)
         (if (null? list-usr)
@@ -217,21 +215,22 @@
             (list-ref sys 3)
             null)))
 
-(define Sel-sys-list-usr (lambda (sys)
+(define Sel-sys-usrhis (lambda (sys)
         (if (system? sys)
             (list-ref sys 4)
             null)))
 
+(define Sel-sys-list-usr (lambda (sys)
+        (if (system? sys)
+            (list-ref sys 5)
+            null)))
+
 ;User
+#|
 (define Sel-usr-name (lambda (usr)
         (if (user? usr)
             (list-ref usr 0)
-            null)))
-
-(define Sel-usr-history (lambda (usr)
-        (if (user? usr)
-            (list-ref usr 1)
-            null)))
+            null)))|#
 
 ;------------------Duplicidad
 ;Sin Utilidad por ahora
@@ -272,6 +271,11 @@
                 (= (Sel-cb-id cb1) (Sel-cb-id cb2))))
         (remove-duplicates list-cb compare-cb-id)))
 
+(define dup-list-usr (lambda (list-usr)
+        (define compare-usr-name (lambda (usr1 usr2)
+                (equal? usr1 usr2)))
+        (remove-duplicates list-usr compare-usr-name)))
+
 
 ;-------------------Modificadores
 
@@ -309,11 +313,13 @@
             InvalidChatbot)))
 
 ;System
+
+  ;System add Chatbot
 (define change-sys-cb (lambda (sys list-cb)
         (define delete-sys-cb (lambda (sys)
                 (remove (Sel-sys-cb sys) sys)))
         (if (and (system? sys)(all-chatbot? list-cb))
-            (cons (Sel-sys-name sys) (cons (Sel-sys-startcbcode sys) (cons (list-cb) (cdddr sys))))
+            (cons (Sel-sys-name sys) (cons (Sel-sys-startcbcode sys) (cons list-cb (cdddr sys))))
             InvalidSystem)))
 
 (define system-add-chatbot (lambda (sys cb)
@@ -321,18 +327,43 @@
             (change-sys-cb sys (dup-list-cb (append (Sel-sys-cb sys) (list cb))))
             InvalidSystem)))
 
+  ;System add User
 (define change-sys-usr-list (lambda (sys list-usr)
         (define delete-sys-usr (lambda (usr)
                 (remove (Sel-sys-list-usr sys) sys)))
         (if (and (system? sys)(all-user? list-usr))
-            (append (delete-sys-usr sys) list-usr)
+            (append (delete-sys-usr sys) (list list-usr))
             InvalidUser)))
 
 (define system-add-user (lambda (sys usr)
         (if (and (system? sys)(user? usr))
-            (change-sys-usr-list sys (append (Sel-sys-list-usr sys) (list usr)))
+            (change-sys-usr-list sys (dup-list-usr (append (Sel-sys-list-usr sys) (list usr))))
             InvalidUser)))
-            
+
+  ;System-login-logout
+(define usr-is-in (lambda (usr list-usr)
+        (string? (findf (lambda (arg) (equal? usr arg)) list-usr))))
+
+(define change-sys-usr (lambda (sys usr)
+        (if (and (system? sys)(user? usr))
+            (cons (Sel-sys-name sys) (cons (Sel-sys-startcbcode sys)
+            (cons (Sel-sys-cb sys) (cons usr (cddddr sys)))))
+            InvalidSystem)))
+
+  ;System Login
+(define system-login (lambda (sys usr)
+        (if (and (system? sys)(user? usr))
+            (if (and (equal? NoUser (Sel-sys-usr sys))(usr-is-in usr (Sel-sys-list-usr sys)))
+                (change-sys-usr sys usr)
+                sys)
+            InvalidSystem)))
+
+  ;System Logout
+(define system-logout (lambda (sys)
+        (if (system? sys)
+            (change-sys-usr sys NoUser)
+            InvalidSystem)))
+                
 
 ;-----------------------------------------------------------
 
