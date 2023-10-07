@@ -395,9 +395,11 @@
         (if (system? sys)
             (change-sys-usr (refresh-sys-usr sys) NoUser)
             InvalidSystem)))
-                
 
-;User
+  ;System talk rec
+(define system-talk-rec (lambda (sys msg)
+        (if (and (system? sys)(string? msg)(not (equal? (Sel-sys-usr sys) NoUser)))
+            
 
 ;-----------------------------------------------------------
 
