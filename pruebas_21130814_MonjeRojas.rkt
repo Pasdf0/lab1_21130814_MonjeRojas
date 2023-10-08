@@ -1,5 +1,12 @@
 #lang Racket
-(require "Proy_Funcional.rkt")
+
+(require "main_21130814_MonjeRojas.rkt")
+(require "option_21130814_MonjeRojas.rkt")
+(require "flow_21130814_MonjeRojas.rkt")
+(require "chatbot_21130814_MonjeRojas.rkt")
+(require "system_21130814_MonjeRojas.rkt")
+(require "user_21130814_MonjeRojas.rkt")
+(require "chathistory_21130814_MonjeRojas.rkt")
 
 ;Chabot0
 (define op1 (option 1 "1) Viajar" 1 1 "viajar" "turistear" "conocer"))
@@ -54,5 +61,5 @@
 (define s15 (system-talk-rec s14 "1"))
 (define s16 (system-talk-rec s15 "3"))
 (define s17 (system-talk-rec s16 "5"))
-;(display (system-synthesis s17 "user2"))
+(display (system-synthesis s17 "user2"))
 ;(system-simulate s0 5 32131)
