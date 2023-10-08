@@ -46,7 +46,6 @@
 (define s8 (system-login s7 "user2"))
 (define s9 (system-logout s8))
 (define s10 (system-login s9 "user2"))
-#|
 ;las siguientes interacciones deben funcionar de igual manera con system-talk-rec o system-talk-norec
 (define s11 (system-talk-rec s10 "hola"))
 (define s12 (system-talk-rec s11 "1"))
@@ -55,5 +54,5 @@
 (define s15 (system-talk-rec s14 "1"))
 (define s16 (system-talk-rec s15 "3"))
 (define s17 (system-talk-rec s16 "5"))
-(display (system-synthesis s17 "user2"))
-(system-simulate s0 5 32131)|#
+;(display (system-synthesis s17 "user2"))
+;(system-simulate s0 5 32131)

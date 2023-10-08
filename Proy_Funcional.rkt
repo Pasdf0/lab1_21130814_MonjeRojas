@@ -149,7 +149,7 @@
             (list-ref op 2)
             null)))
 
-(define Sel-op-initialfwcodelink (lambda (op)
+(define Sel-op-fwcodelink (lambda (op)
         (if (option? op)
             (list-ref op 3)
             null)))
@@ -233,41 +233,12 @@
             (list-ref usr 0)
             null)))
 
-(define Sel-usr-history (lambda (usr)
+(define Sel-usr-his (lambda (usr)
         (if (user? usr)
             (list-ref usr 1)
             null)))
 
-;User
-#|
-(define Sel-usr-name (lambda (usr)
-        (if (user? usr)
-            (list-ref usr 0)
-            null)))|#
-
-;------------------Duplicidad
-;Sin Utilidad por ahora
-;(define flow-dup-op? (lambda (fw)
-;        (if (flow? fw)
-;            (list-dup? (map Sel-op-code (Sel-fw-op fw))) 
-;            null)))
-
-#| Esto haria insertar de a uno mas eficiente pero no es necesario/ trabajo en progreso
-(define flow-insert-op (lambda (fw op)
-        (if (false? (member (Sel-op-code op) (map Sel-op-code (Sel-fw-op fw))))
-            (append (Sel-fw-op fw) (list op))
-            InvalidFlow)))
-
-(define chatbot-insert-fw (lambda (fw op)
-        (if (false? (member (Sel-op-code op) (map Sel-op-code (Sel-fw-op fw))))
-            (append (Sel-fw-op fw) (list op))
-            InvalidFlow)))
-
-(define system-insert-cb (lambda (fw op)
-        (if (false? (member (Sel-op-code op) (map Sel-op-code (Sel-fw-op fw))))
-            (append (Sel-fw-op fw) (list op))
-            InvalidFlow)))
-|#
+;--------------------Duplicidad
 
 (define dup-list-op (lambda (list-op)
         (define compare-code (lambda (op1 op2)
@@ -296,7 +267,7 @@
 (define change-op-code (lambda (op n)
         (if (and (option? op) (integer? n))
             (option n (Sel-op-msg op) (Sel-op-cbcodelink op)
-                    (Sel-op-initialfwcodelink op) (Sel-op-keywords op))
+                    (Sel-op-fwcodelink op) (Sel-op-keywords op))
             InvalidOption)))
 
 ;Flow
@@ -318,6 +289,17 @@
                 (remove (Sel-cb-fw cb) cb)))
         (if (and (chatbot? cb)(all-flow? list-fw))
             (append (delete-cb-fw cb) list-fw)
+            InvalidChatbot)))
+
+(define change-cb-startfwid (lambda (cb id)
+        (if (and (chatbot? cb)(epi? id))
+            (cons (Sel-cb-id cb) (cons (Sel-cb-name cb) (cons (Sel-cb-welmsg cb)
+            (cons id (cddddr cb)))))
+            InvalidChatbot)))
+
+(define change-list-cb-startfwid (lambda (list-cb cb id)
+        (if (and (all-chatbot? list-cb)(chatbot? cb)(epi? id))
+            (dup-list-cb (cons (change-cb-startfwid cb) list-cb))
             InvalidChatbot)))
 
 (define chatbot-add-flow (lambda (cb fw)
@@ -397,25 +379,103 @@
             InvalidSystem)))
 
   ;System talk rec
+;(define find-op (lambda (fw code)
+;        (findf (lambda (arg) (= code (car arg))) (Sel-fw-op fw))))
+#|
+(define find-fw-rec (lambda (cb id)
+        (define fw-rec-aux (lambda (list-fw id)
+                (if (null? list-fw)
+                    InvalidFlow
+                    (if (equal? id (caar list-fw))
+                        (car list-fw)
+                        (fw-rec-aux (cdr list-fw) id)))))
+        (fw-rec-aux (Sel-cb-fw cb) id)))
+|#
+(define find-fw (lambda (cb id)
+        (findf (lambda (arg) (= id (car arg))) (Sel-cb-fw cb))))
+#|
+(define find-cb-rec (lambda (sys id)
+        (define cb-rec-aux (lambda (list-cb id)
+                (if (null? list-cb)
+                    InvalidChatbot
+                    (if (equal? id (caar list-cb))
+                        (car list-cb)
+                        (cb-rec-aux (cdr list-cb) id)))))
+        (cb-rec-aux (Sel-sys-cb sys) id)))
+|#
+(define find-cb (lambda (sys id)
+        (findf (lambda (arg) (= id (car arg))) (Sel-sys-cb sys))))
+
+(define msg-in-op? (lambda (op msg)
+        (if (string? (findf (lambda (arg) (equal? (string-downcase msg) arg)) (Sel-op-keywords op)))
+            #t
+            (if (not (boolean? (string->number msg)))
+                (= (string->number msg) (Sel-op-code op))
+                #f))))
+
+(define msg-in-fw? (lambda (fw msg)
+        (list? (member #t
+               (map (lambda (arg) (msg-in-op? arg msg)) (Sel-fw-op fw))))))
+
+(define msg-in-fw-norec (lambda (fw msg)
+        (findf (lambda (arg) (msg-in-op? arg msg)) (Sel-fw-op fw))))
+         
+(define msg-in-fw-rec (lambda (fw msg)
+        (define msg-fw-aux (lambda (list-op msg)
+                (if (null? list-op)
+                    #f
+                    (if (msg-in-op? (car list-op) msg)
+                        (car list-op)
+                        (msg-fw-aux (cdr list-op) msg)))))
+        (msg-fw-aux (Sel-fw-op fw) msg)))
+
+(define get-current-fw (lambda (sys)
+        (find-fw (find-cb sys (Sel-sys-startcbcode sys))
+                 (Sel-cb-startfwid (find-cb sys (Sel-sys-startcbcode sys))))))
+
+(define msg-in-sys? (lambda (sys msg)
+        (msg-in-fw? (get-current-fw sys) msg)))
+
+(define msg-in-sys-rec (lambda (sys msg)
+        (msg-in-fw-rec (get-current-fw sys) msg)))
+
+(define msg-in-sys-norec (lambda (sys msg)
+        (msg-in-fw-norec (get-current-fw sys) msg)))
+
+(define usr-add-log (lambda (usr msg)
+        (if (and (user? usr) (string? msg))
+            (cons (Sel-usr-name usr) (cons (append (Sel-usr-his usr) (list msg)) null))
+            InvalidUser)))
+
+(define sys-update-aux (lambda (sys newcbcode msg)
+        (cons (Sel-sys-name sys) (cons newcbcode (cons (Sel-sys-cb sys)
+        (cons (usr-add-log (Sel-sys-usr sys) msg) (cddddr sys)))))))
+
+(define sys-cb-update (lambda (sys newfwid)
+        (cons (Sel-sys-name sys) (cons (Sel-sys-startcbcode sys) (cons
+        (change-list-cb-startfwid (Sel-sys-cb sys) (find-cb sys (Sel-sys-startcbcode sys)) newfwid)
+        (cdddr sys))))))
+
+(define sys-update-rec (lambda (sys msg)
+        (sys-cb-update (sys-update-aux sys (Sel-op-cbcodelink (msg-in-sys-rec sys msg)) msg)
+                       (Sel-op-fwcodelink (msg-in-sys-rec sys msg)))))
+
+(define sys-update-norec (lambda (sys msg)
+        (sys-cb-update (sys-update-aux sys (Sel-op-cbcodelink (msg-in-sys-rec sys msg)) msg)
+                       (Sel-op-fwcodelink (msg-in-sys-norec sys msg)))))
+                                                               
 (define system-talk-rec (lambda (sys msg)
         (if (and (system? sys)(string? msg)(not (equal? (Sel-sys-usr sys) NoUser)))
+            (if (msg-in-sys? sys msg)
+                (sys-update-rec sys msg)
+                (sys-update-aux sys (Sel-sys-startcbcode sys) msg))
+            InvalidSystem)))
+
+(define system-talk-norec (lambda (sys msg)
+        (if (and (system? sys)(string? msg)(not (equal? (Sel-sys-usr sys) NoUser)))
+            (if (msg-in-sys? sys msg)
+                (sys-update-norec sys msg)
+                (sys-update-aux sys (Sel-sys-startcbcode sys) msg))
+            InvalidSystem)))
             
-
-;-----------------------------------------------------------
-
-#|
-;testing
-(define op1 (option 1 "msg1" 1 1 "Key1-1" "Key1-2" "Key1-3"))
-(define op2 (option 2 "msg2" 2 2 "Key2-1" "Key2-2" "Key2-3"))
-(define op3 (option 3 "msg3" 3 3 "Key3-1" 25 "Key3-3"))
-(define op4 (option 3 "msg4" 4 4 "Key4-1" "Key4-2" "Key4-3"))
-(define fw1 (flow 1 "TestFlow1" op1 op2 op3))
-;(change-op-code op3 4)
-(define n1 (myRandom 1))
-(define n2 (myRandom n1))
-;(dup-list-op (Sel-fw-op fw1))
-(define test (dup-list-op (append (Sel-fw-op fw1) (list op4))))
-;(flow-add-option fw1 op4)
-|#
-
 
