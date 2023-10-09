@@ -10,43 +10,169 @@
 
 ;############### Main ###############
 
-(define (myRandom Xn)
-        (modulo (+ (* 1103515245 Xn) 12345) 2147483648)
-)
+;No implementada
+;(define (myRandom Xn)
+;        (modulo (+ (* 1103515245 Xn) 12345) 2147483648)
+;) 
 
-; Funcionalidad 12 System talk rec
 
-;Dominio: Flow x msg(string)
+;        -------------------------------------------------------------
+;         ################ Requerimientos Funcionales ################
+;        -------------------------------------------------------------
+
+;---------------------------------------------
+; Requerimiento Funcional 2 Constructor Option
+;---------------------------------------------
+
+;Dominio: Code(positive integer) x Message(string) x ChatbotCodeLink(positive integer) x
+;         InitialFlowCodeLink(positive integer) x Keywords(list)
 ;Recorrido: Option
+;Recursividad: No aplica
+;Descripción: Crea un option a partir de las entradas, verificando que estas sean del tipo requerido.
+(define option (lambda (Code Message ChatbotCodeLink InitialFlowCodeLink . Keywords)
+        (if (and (epi? Code)(string? Message)(epi? ChatbotCodeLink)(epi? InitialFlowCodeLink))
+            (list Code Message ChatbotCodeLink InitialFlowCodeLink (if (all-strings? Keywords)
+                                                                       (all-lowercase Keywords) null))
+            InvalidOption)))
+
+;-------------------------------------------
+; Requerimiento Funcional 3 Constructor Flow
+;-------------------------------------------
+
+;Dominio: Flow-ID(positive integer)x msg(string) x Options (List of Options)
+;Recorrido: Flow
+;Recursividad: No aplica
+;Descripción: Construye un flow tomando las entradas, verificando que sus tipos
+;             de datos corresponden y agregandolos a una lista.
+(define flow (lambda (Flow-ID msg . Options)
+        (if (and (epi? Flow-ID)(string? msg))
+            (list Flow-ID msg (if (all-option? Options)
+                                   (dup-list-op Options) null))
+            InvalidFlow)))
+
+;------------------------------------------
+; Requerimiento Funcional 4 Flow add Option
+;------------------------------------------
+
+;Dominio: Flow x Option
+;Recorrido: Flow
+;Recursividad: No aplica
+;Descripción: Agrega un option a un flow, es eliminado en caso de duplicidad.
+(define flow-add-option (lambda (fw op)
+        (if (and (flow? fw)(option? op))
+            (change-fw-op fw (dup-list-op (append (Sel-fw-op fw) (list op))))
+            InvalidFlow)))
+
+;----------------------------------------------
+; Requerimiento Funcional 5 Constructor Chatbot
+;----------------------------------------------
+
+;Dominio: Chatbot-ID(positive integer) x name(string) x welcome-msg(string) x startFlowID(positive integer) x Flows(List of flows)
+;Recorrido: Chatbot
+;Recursividad: No aplica
+;Descripción: Constructor de chatbot, comprueba que los tipos de datos de las entradas correspondan con lo que
+;             se requiere, si lo hacen, se crea un chatbot con estas.
+(define chatbot (lambda (Chatbot-ID name welcome-msg startFlowID . Flows)
+        (if (and (epi? Chatbot-ID)(string? name)(string? welcome-msg)(epi? startFlowID))
+            (list Chatbot-ID name welcome-msg startFlowID (if (all-flow? Flows)
+                                                              (dup-list-fw Flows) null))
+            InvalidChatbot)))
+
+;-------------------------------------------
+; Requerimiento Funcional 6 Chatbot add flow
+;-------------------------------------------
+
+;Dominio: Chatbot x Flow
+;Recorrido: Chatbot
 ;Recursividad: Cola
-;Descripción: Busca si un msg esta en un flow, revisando cada option, sus keywords e ids,
-;             De ser encontrado se retorna la option que contiene el msg.
-;             Se utiliza funcion msg-in-op? contenida en TDA-System.
-(define msg-in-fw-rec (lambda (fw msg)
-        (define msg-fw-aux (lambda (list-op msg)
-                (if (null? list-op)
-                    #f
-                    (if (msg-in-op? (car list-op) msg)
-                        (car list-op)
-                        (msg-fw-aux (cdr list-op) msg)))))
-        (msg-fw-aux (Sel-fw-op fw) msg)))
+;Descripción: Usa cb-add-aux para añadir un flow a la lista de flows usando recursion de cola
+;             luego reemplaza la lista de flows obtenida en el chatbot indicado.
+(define chatbot-add-flow (lambda (cb fw)
+        (define cb-add-aux (lambda (list-fw fw aux)
+                (if (null? list-fw)
+                    (append aux (list fw))
+                    (if (= (Sel-fw-id fw) (Sel-fw-id (car list-fw)))
+                        (append aux list-fw)
+                        (cb-add-aux (cdr list-fw) fw (append aux (list (car list-fw))))))))    
+        (if (and (chatbot? cb)(flow? fw))
+            (change-cb-fw cb (cb-add-aux (Sel-cb-fw cb) fw (list )))
+            InvalidChatbot)))
 
-;Dominio: System x msg(string)
-;Recorrido: Option
-;Recursividad: Propia de msg-in-fw-rec (Cola)
-;Descripción: Encapsula función msg-in-fw-rec para realizar búsqueda en system
-(define msg-in-sys-rec (lambda (sys msg)
-        (msg-in-fw-rec (get-current-fw sys) msg)))
+;---------------------------------------------
+; Requerimiento Funcional 7 Constructor System
+;---------------------------------------------
 
-;Dominio: System x msg(string)
+;Dominio: name(string) x InitialChatbotCodeLink(positive integer) x Chatbots(list)
 ;Recorrido: System
-;Recursividad: Propia de msg-in-sys-rec y msg-in-fw-rec (Cola)
-;Descripción: Funcion que actualiza el start-chatbot-code de un system, el chatbot-initialflowid del
-;             chatbot que actualizó la función anterior y finalmente agrega un registro al chathistory del
-;             user que está logueado en el system. Esto a partir del option obtenido en msg-in-sys-rec.
-(define sys-update-rec (lambda (sys msg)
-        (sys-update-usr (sys-update-cb-fwid (sys-update-cbcode sys
-        (Sel-op-cbcodelink (msg-in-sys-rec sys msg))) (Sel-op-fwcodelink (msg-in-sys-rec sys msg))) msg)))
+;Recursividad: No aplica
+;Descripción: Crea un system verificando que los argumentos de entrada sean los requeridos.
+(define system (lambda (name InitialChatbotCodeLink . Chatbots)
+        (if (and (string? name)(epi? InitialChatbotCodeLink))
+            (list name InitialChatbotCodeLink (if (all-chatbot? Chatbots)
+                                                  (dup-list-cb Chatbots) null) NoUser EmptyList)
+            InvalidSystem)))
+
+;---------------------------------------------
+; Requerimiento Funcional 8 System add chatbot
+;---------------------------------------------
+
+;Dominio: System x Chatbot
+;Recorrido: System
+;Recursividad: No aplica
+;Descripción: Añade un chatbot al system y en caso de duplicidad lo elimina.
+(define system-add-chatbot (lambda (sys cb)
+        (if (and (system? sys)(chatbot? cb))
+            (change-sys-cb sys (dup-list-cb (append (Sel-sys-cb sys) (list cb))))
+            InvalidSystem)))
+
+;------------------------------------------
+; Requerimiento Funcional 9 System add User
+;------------------------------------------
+
+;Dominio: System x User
+;Recorrido: System
+;Recursividad: No aplica
+;Descripción: Agrega un user al system y en caso de duplicidad lo elimina.
+(define system-add-user (lambda (sys usr)
+        (if (and (system? sys)(string? usr))
+            (change-sys-usr-list sys (dup-list-usr (append (Sel-sys-list-usr sys) (list (user usr)))))
+            InvalidUser)))
+
+;----------------------------------------
+; Requerimiento Funcional 10 System Login
+;----------------------------------------
+
+;Dominio: System x usr-name(string)
+;Recorrido: System
+;Recursividad: No aplica
+;Descripción: Si no hay una sesión activa y el string ingresado corresponde a un user ingresado en el system,
+;             se crea una sesión activa con el usuario escogido.
+(define system-login (lambda (sys usr-name)
+        (if (and (system? sys)(string? usr-name))
+            (if (and (equal? NoUser (Sel-sys-usr sys))(usr-is-in? (user usr-name) (Sel-sys-list-usr sys)))
+                (change-sys-usr sys (user usr-name))
+                sys)
+            InvalidSystem)))
+
+;-----------------------------------------
+; Requerimiento Funcional 11 System Logout
+;-----------------------------------------
+
+;Dominio: System
+;Recorrido: System
+;Recursividad: No aplica
+;Descripción: Reemplaza el user en la sesión activa por NoUser, además actualiza el user de la sesión
+;             cerrada en la lista de users.
+(define system-logout (lambda (sys)
+        (if (system? sys)
+            (if (equal? (Sel-sys-usr sys) NoUser)
+                sys
+                (change-sys-usr (refresh-sys-usr sys) NoUser))
+            InvalidSystem)))
+
+;-------------------------------------------
+; Requerimiento Funcional 12 System talk rec
+;-------------------------------------------
 
 ;Dominio: System x msg(string)
 ;Recorrido: System
@@ -62,31 +188,9 @@
                 (sys-update-usr sys msg))
             InvalidSystem)))
 
-; Funcionalidad 13 System talk norec
-
-;Dominio: Flow x msg(string)
-;Recorrido: Option
-;Recursividad: No aplica
-;Descripción: Misma funcion que msg-in-fw-rec pero sin recursividad, busca un option a partir de un msg.
-(define msg-in-fw-norec (lambda (fw msg)
-        (findf (lambda (arg) (msg-in-op? arg msg)) (Sel-fw-op fw))))
-
-;Dominio: System x msg(string)
-;Recorrido: Option
-;Recursividad: No aplica
-;Descripción: Encapsula msg-in-fw-norec, busca option en un system a partir de un string.
-(define msg-in-sys-norec (lambda (sys msg)
-        (msg-in-fw-norec (get-current-fw sys) msg)))
-
-;Dominio: System x msg(string)
-;Recorrido: System
-;Recursividad: No aplica
-;Descripción: Actualiza el start-chatbot-code de un system, el chatbot-initialflowid del
-;             chatbot y el chathistory del usuario logueado. Similar a system-update-rec pero
-;             sin utilizar recursividad.
-(define sys-update-norec (lambda (sys msg)
-        (sys-update-usr (sys-update-cb-fwid (sys-update-cbcode sys
-        (Sel-op-cbcodelink (msg-in-sys-rec sys msg))) (Sel-op-fwcodelink (msg-in-sys-norec sys msg))) msg)))
+;---------------------------------------------
+; Requerimiento Funcional 13 System talk norec
+;---------------------------------------------
 
 ;Dominio: System x msg
 ;Recorrido: System
@@ -100,27 +204,9 @@
                 (sys-update-usr sys msg))
             InvalidSystem)))
 
-; Funcionalidad 14 System synthesis
-
-;Dominio: Lista de strings
-;Recorrido: string
-;Recursividad: No aplica
-;Descripción: Junta los strings de una lista agregando un salto de linea entre ellos, sirve para
-;             formatear las opciones almacenadas en el chathistory.
-(define str-append-cola (lambda (lista)
-        (map (lambda (arg) (string-append arg "\n")) lista)))
-
-;Dominio: User
-;Recorrido: string
-;Recursividad: No aplica
-;Descripción: Formatea un chathistory juntando los strings y añadiendo saltos de linea, retorna un string
-;             listo para display
-(define format-sys (lambda (usr)
-        (define format-aux (lambda (chathis)
-                (string-append (Sel-usr-name usr) ": " (car chathis) "\n"
-                (cadr chathis) ": " (caddr chathis) "\n"
-                (apply string-append (str-append-cola (cdddr chathis))) "\n\n")))
-        (apply string-append (map format-aux (Sel-usr-his usr)))))
+;--------------------------------------------
+; Requerimiento Funcional 14 System synthesis
+;--------------------------------------------
 
 ;Dominio: System x usr-name(string)
 ;Recorrido: string
@@ -129,14 +215,16 @@
 ;             formateado para display.
 (define system-synthesis (lambda (sys usr-name)
         (if (and (system? sys)(string? usr-name))
-            (if (usr-is-in (user usr-name) (Sel-sys-list-usr sys))
+            (if (usr-is-in? (user usr-name) (Sel-sys-list-usr sys))
                 (format-sys (if (equal? (Sel-usr-name (Sel-sys-usr sys)) usr-name)
                                 (Sel-sys-usr sys)
                                 (find-usr (user usr-name) (Sel-sys-list-usr sys))))
                 InvalidUser)
             InvalidUser)))
 
-; Funcionalidad 15 System simulate
+;-------------------------------------------
+; Requerimiento Funcional 15 System simulate
+;-------------------------------------------
 
 ;(define system-simulate (lambda (sys maxInter seed)
         

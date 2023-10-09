@@ -63,5 +63,35 @@
 (define s15 (system-talk-rec s14 "1"))
 (define s16 (system-talk-rec s15 "3"))
 (define s17 (system-talk-rec s16 "5"))
-;(display (system-synthesis s17 "user2"))
-;(system-simulate s0 5 32131)
+(display (system-synthesis s17 "user2"))
+;(system-simulate s0 5 32131) ;No se implementó
+
+;Ejemplos complementarios
+;Se añaden ejemplos para los requerimientos funcionales que no tienen 3 o más ejemplos en la
+;parte anterior del script.
+
+(define f12 (flow-add-option f10 op18))
+(define f13 (flow-add-option f12 op17)) ;se elimina por duplicidad
+(define f31 (flow-add-option f30 op15))
+(define cb3 (chatbot-add-flow cb0 f21))
+(define cb4 (chatbot-add-flow cb3 f22))
+(define cb5 (chatbot-add-flow cb2 f20)) ;se elimina por duplicidad
+(define s01 (system "Chatbot test" 1 cb0 cb3 cb5 cb5)) ;eliminará cb3 y un cb5 por duplicidad
+(define s02 (system "Chatbot test2" 25)) ;se crea sin chatbots
+(define s03 (system "Chatbot testfail" "not-id" cb0 cb1 cb2 cb3)) ;Retorna InvalidSystem
+(define s04 (system-add-chatbot s01 cb1)) 
+(define s05 (system-add-chatbot s02 cb5)) ;se agrega chatbot a system sin chatbots
+(define s06 (system-add-chatbot s0 cb5)) ;no se agrega por duplicidad de id
+(define s07 (system-logout s0)) ;Se hace logout en un system sin user logueado
+(define s08 (system-logout s7)) ;Se hace logout en un system sin chathistory en user activo
+(define s11-norec (system-talk-norec s10 "hola"))
+(define s12-norec (system-talk-norec s11-norec "1"))
+(define s13-norec (system-talk-norec s12-norec "1"))
+(define s14-norec (system-talk-norec s13-norec "Museo"))
+(define s15-norec (system-talk-norec s14-norec "1"))
+(define s16-norec (system-talk-norec s15-norec "3"))
+(define s17-norec (system-talk-norec s16-norec "5"))
+
+(display "\nSystem-synthesis norec: \n\n")
+(display (system-synthesis s17-norec "user2")) ;Ejemplo system-synthesis con talk-norec
+(display (system-synthesis s10 "user1")) ;Ejemplo user sin historial, no se muestra nada.

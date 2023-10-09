@@ -1,0 +1,95 @@
+Autoevaluación Amaru Monje Rojas - 21.130.814-1
+Laboratorio 1 - Paradigmas de Programación
+Paradigma Funcional
+
+Puntajes: 0, 0.25, 0.5, 0.75, 1
+
+
+-Requerimientos No Funcionales:
+
+1) Autoevaluación:
+Puntaje: 1
+
+2) Lenguaje:
+Puntaje: 1
+
+3) Versión:
+Puntaje: 1 (Se utilizó DrRacket 8.10)
+
+4) Standard:
+Puntaje: 1
+
+5) No variables:
+Puntaje: 1
+
+6) Documentación:
+Puntaje: 1
+(Si bien no se implementó el requerimiento funcional 15,
+todas las funciones definidas están debidamente documentadas)
+
+7) Dom->Rec:
+Puntaje: 1
+
+8) Organización:
+Puntaje: 1
+
+9) Historial:
+Puntaje: 1
+
+10) Script de pruebas:
+Puntaje: 1
+(Se asumió que son 3 ejemplos para cada función incluyendo las
+que se encuentran en el script provisto)
+
+11) Prerrequisitos:
+Puntaje: 1
+
+
+-Requerimientos Funcionales:
+
+1) TDAs:
+Puntaje: 1 
+
+2) TDA Option - Constructor: option
+Puntaje: 1
+
+3) TDA Flow - Constructor: flow
+Puntaje: 1
+
+4) TDA Flow - Modificador: flow-add-option
+Puntaje: 1
+
+5) TDA Chatbot - Constructor: chatbot
+Puntaje: 1
+
+6) TDA Chatbot - Modificador: chatbot-add-flow
+Puntaje: 1
+
+7) TDA System - Constructor: system
+Puntaje: 1
+(No se registra la fecha de creación, no me di cuenta de que se requería,
+sin embargo, es completamente funcional, funciona el 100% de las veces)
+
+8) TDA System - Modificador: system-add-chatbot
+Puntaje: 1
+
+9) TDA System - Modificador: system-add-user
+Puntaje: 1
+
+10) TDA System: system-login
+Puntaje: 1
+
+11) TDA System: system-logout
+Puntaje: 1
+
+12) system-talk-rec:
+Puntaje: 1
+
+13) system-talk-norec:
+Puntaje: 1
+
+14) system-synthesis:
+Puntaje: 1
+
+15) system-simulate:
+Puntaje: 0
