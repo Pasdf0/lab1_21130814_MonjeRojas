@@ -1,0 +1,3 @@
+HTTPS: https://github.com/Pasdf0/lab1_21130814_MonjeRojas.git
+SSH: git@github.com:Pasdf0/lab1_21130814_MonjeRojas.git
+GitHub CLI: gh repo clone Pasdf0/lab1_21130814_MonjeRojas
